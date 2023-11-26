@@ -7,16 +7,16 @@ import datetime
 import base64
 import re
 import cryptography
-import binascii  # Add this import statement
+import binascii 
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes  
 from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QLabel, QLineEdit, QPushButton, \
     QTextEdit, QListWidget, QMessageBox, QFormLayout, QListWidgetItem, QInputDialog
+from PyQt5.QtCore import Qt  # Add this line to import Qt
 
 
-# Create the main application window
 class PasswordManager(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -24,9 +24,9 @@ class PasswordManager(QMainWindow):
         self.setWindowTitle("Password Manager")
         self.setGeometry(100, 100, 600, 400)
 
-        # Set the login widget as the initial central widget
         self.login_widget = LoginWidget(self)
         self.setCentralWidget(self.login_widget)
+
 
 # Widget for user login
 class LoginWidget(QWidget):
@@ -46,11 +46,15 @@ class LoginWidget(QWidget):
         self.login_button = QPushButton("Login")
         self.login_button.clicked.connect(self.login)
 
-        layout.addWidget(self.username_label)
-        layout.addWidget(self.username_entry)
-        layout.addWidget(self.password_label)
-        layout.addWidget(self.password_entry)
-        layout.addWidget(self.login_button)
+        # Adjusted vertical and horizontal spacing for better alignment
+        layout.addWidget(self.username_label, alignment=Qt.Alignment())
+        layout.addWidget(self.username_entry, alignment=Qt.Alignment())
+        layout.addWidget(self.password_label, alignment=Qt.Alignment())
+        layout.addWidget(self.password_entry, alignment=Qt.Alignment())
+        layout.addWidget(self.login_button, alignment=Qt.Alignment())
+
+        # Added some additional spacing for a cleaner look
+        layout.addSpacing(20)
 
         self.setLayout(layout)
 
@@ -67,7 +71,7 @@ class LoginWidget(QWidget):
         else:
             QMessageBox.warning(self, "Login Failed", "Invalid username or password. Please try again.")
 
-# Widget for managing passwords
+
 class PasswordManagerWidget(QWidget):
     def __init__(self, parent, username, master_password):
         super().__init__()
@@ -77,7 +81,6 @@ class PasswordManagerWidget(QWidget):
         self.passwords = []
         self.password_key = self._derive_key(master_password)
 
-        # Load stored passwords from a JSON file
         self.load_passwords()
 
         layout = QVBoxLayout()
@@ -107,13 +110,14 @@ class PasswordManagerWidget(QWidget):
         self.password_list = QListWidget()
         layout.addWidget(self.password_list)
 
-        self.show_password_button = QPushButton("Show Passwords")
+        self.show_password_button = QPushButton("Show/Hide Passwords")
         self.show_password_button.clicked.connect(self.show_passwords)
         layout.addWidget(self.show_password_button)
 
         self.setLayout(layout)
 
-    # Function to generate a random password
+        self.update_password_list()
+
     def generate_password(self):
         try:
             length = int(self.length_entry.text())
@@ -123,51 +127,49 @@ class PasswordManagerWidget(QWidget):
         except ValueError:
             QMessageBox.warning(self, "Invalid Length", "Please enter a valid password length.")
 
-    # Function to save a password entry
     def save_password(self):
         website = self.website_entry.text()
         username = self.username_entry.text()
         password = self.password_entry.text()
 
-        # Get the current date and time
         current_datetime = datetime.datetime.now()
 
         if not website or not username or not password:
             QMessageBox.warning(self, "Error", "Please enter website, username, and password.")
             return
 
-        # Create a password entry dictionary with a timestamp
         entry = {
             "website": website,
             "username": username,
             "password": password,
-            "timestamp": current_datetime.strftime("%Y-%m-%d %H:%M:%S")  # Format the timestamp
+            "timestamp": current_datetime.strftime("%Y-%m-%d %H:%M:%S")
         }
         self.passwords.append(entry)
-        self.save_passwords()  # Save the updated password list to a JSON file
-        self.update_password_list()  # Update the displayed password list
-        self.clear_entries()  # Clear the input fields
+        self.save_passwords()
+        self.update_password_list()
+        self.clear_entries()
         self.result_label.setText("Password saved successfully!")
 
-    # Function to show or hide passwords in the list
     def show_passwords(self):
         for index in range(self.password_list.count()):
             item = self.password_list.item(index)
             password_item = self.passwords[index]
-            item_text = f"Website: {password_item['website']} | Username: {password_item['username']} | Date Generated: {password_item['timestamp']} | Password: {password_item['password']}"
-            item.setText(item_text)
+            item_text = (
+                f"Website: {password_item['website']} | "
+                f"Username: {password_item['username']} | "
+                f"Date Generated: {password_item['timestamp']} | "
+                f"Password: {password_item['password']}"
+            )
+            item.setText(item_text if not password_item.get("show_password", False) else f"Website: {password_item['website']} | Username: {password_item['username']}")
 
-            # Toggle the "show_password" flag
             password_item["show_password"] = not password_item.get("show_password", False)
 
-    # Function to clear input fields
     def clear_entries(self):
         self.website_entry.clear()
         self.username_entry.clear()
         self.password_entry.clear()
         self.length_entry.clear()
 
-    # Function to update the displayed password list
     def update_password_list(self):
         self.password_list.clear()
         for entry in self.passwords:
@@ -178,7 +180,6 @@ class PasswordManagerWidget(QWidget):
             item.setText(item_text)
             self.password_list.addItem(item)
 
-    # Function to load passwords from a JSON file
     def load_passwords(self):
         try:
             with open(f"{self.username}_passwords.json", "r") as file:
@@ -198,7 +199,6 @@ class PasswordManagerWidget(QWidget):
         except json.decoder.JSONDecodeError:
             print("JSON file is empty or not in a valid format.")
 
-    # Function to save passwords to a JSON file
     def save_passwords(self):
         encrypted_passwords = []
         for entry in self.passwords:
@@ -213,7 +213,6 @@ class PasswordManagerWidget(QWidget):
         with open(f"{self.username}_passwords.json", "w") as file:
             json.dump(encrypted_passwords, file)
 
-    # Function to derive a key from the master password
     def _derive_key(self, password):
         salt = b'some_random_salt'
         kdf = PBKDF2HMAC(
@@ -226,20 +225,18 @@ class PasswordManagerWidget(QWidget):
         key = kdf.derive(password.encode())
         return key
 
-    # Function to encrypt data
     def _encrypt(self, plaintext, key):
-        nonce = os.urandom(16)  # Generate a new nonce for each encryption
+        nonce = os.urandom(16)
         cipher = Cipher(algorithms.AES(key), modes.GCM(nonce), backend=default_backend())
         encryptor = cipher.encryptor()
         ciphertext = encryptor.update(plaintext.encode()) + encryptor.finalize()
         return base64.urlsafe_b64encode(nonce + encryptor.tag + ciphertext).decode()
 
-    # Function to decrypt data
     def _decrypt(self, ciphertext, key):
         try:
             data = base64.urlsafe_b64decode(ciphertext)
             nonce = data[:16]
-            tag = data[16:32]  # Extract the authentication tag
+            tag = data[16:32]
 
             if len(tag) < 16:
                 raise ValueError("Authentication tag must be 16 bytes or longer.")
@@ -260,17 +257,17 @@ class PasswordManagerWidget(QWidget):
             return ""
 
 
-# Function to check if the provided username and password exist in the user database
 def user_exists(username, password):
-    users = {"testuser": "test123", "max": "password123"}  # Example user database
+    users = {"testuser": "test123", "max": "password123"}
     return users.get(username) == password
 
-# Main function to run the application
+
 def main():
     app = QApplication(sys.argv)
     window = PasswordManager()
     window.show()
     sys.exit(app.exec_())
+
 
 if __name__ == "__main__":
     main()
