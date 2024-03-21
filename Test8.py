@@ -67,10 +67,10 @@ QListWidget::item:selected {
 """
 
 class PasswordManager(QMainWindow):
-    """Main window for the Password Manager application."""
+    # Main window for the Password Manager application.
 
     def __init__(self):
-        """Initialize the PasswordManager."""
+        # Initialize the PasswordManager
         super().__init__()
 
         # Set window title and initial size
@@ -82,10 +82,10 @@ class PasswordManager(QMainWindow):
         self.setGeometry(100, 100, 850, 400)  
 
 class LoginWidget(QWidget):
-    """Widget for the login page of the Password Manager."""
+    # Widget for the login page of the Password Manager.
 
     def __init__(self, parent):
-        """Initialize the LoginWidget."""
+        # Initialize the LoginWidget.
         super().__init__()
         self.parent = parent  # Reference to the parent window
 
@@ -126,7 +126,7 @@ class LoginWidget(QWidget):
         self.setLayout(layout)  # Set the layout for the widget
 
     def login(self):
-        """Handle login functionality."""
+        # Handle login functionality.
         username = self.username_entry.text()
         password = self.password_entry.text()
 
@@ -140,7 +140,7 @@ class LoginWidget(QWidget):
             QMessageBox.warning(self, "Login Failed", "Invalid username or password. Please try again.")
 
     def create_new_user(self):
-        """Handle creating a new user."""
+        # Handle creating a new user.
         username, ok = QInputDialog.getText(self, 'Create New User', 'Enter new username:')
         if ok:
             password, ok = QInputDialog.getText(self, 'Create New User', 'Enter password:')
@@ -165,10 +165,10 @@ class LoginWidget(QWidget):
 
 
 class PasswordManagerWidget(QWidget):
-    """Widget for managing passwords."""
+    # Widget for managing passwords.
 
     def __init__(self, parent, username, master_password):
-        """Initialize the PasswordManagerWidget."""
+        # Initialize the PasswordManagerWidget.
         super().__init__()
 
         self.parent = parent
@@ -204,7 +204,7 @@ class PasswordManagerWidget(QWidget):
         form_layout.addRow("Password Generated:", self.password_entry)
         form_layout.addRow(self.generate_button)
         form_layout.addRow(self.save_button)
-        form_layout.addRow(self.delete_password_button)  # Add delete button to form layout
+        form_layout.addRow(self.delete_password_button) 
         form_layout.addRow(self.result_label)
 
         layout.addLayout(form_layout)  # Add form layout to the main layout
@@ -237,7 +237,7 @@ class PasswordManagerWidget(QWidget):
         self.update_password_list()  # Update password list widget with current passwords
 
     def generate_password(self):
-        """Generate a random password."""
+        # Generate a random password.
         try:
             length = int(self.length_entry.text())
             characters = string.ascii_letters + string.digits + string.punctuation
@@ -247,7 +247,7 @@ class PasswordManagerWidget(QWidget):
             QMessageBox.warning(self, "Invalid Length", "Please enter a valid password length.")
 
     def save_password(self):
-        """Save a password entry."""
+        # Save a password entry.
         website = self.website_entry.text()
         username = self.username_entry.text()
         password = self.password_entry.text()
@@ -271,7 +271,7 @@ class PasswordManagerWidget(QWidget):
         self.result_label.setText("Password saved successfully!")
 
     def show_passwords(self):
-        """Show or hide passwords."""
+        # Show or hide passwords.
         for index in range(self.password_list.count()):
             item = self.password_list.item(index)
             password_item = self.passwords[index]
@@ -286,14 +286,14 @@ class PasswordManagerWidget(QWidget):
             password_item["show_password"] = not password_item.get("show_password", False)
 
     def clear_entries(self):
-        """Clear password input fields."""
+        # Clear password input fields.
         self.website_entry.clear()
         self.username_entry.clear()
         self.password_entry.clear()
         self.length_entry.clear()
 
     def update_password_list(self):
-        """Update the password list widget."""
+        # Update the password list widget.
         self.password_list.clear()
         for entry in self.passwords:
             item = QListWidgetItem()
@@ -304,7 +304,7 @@ class PasswordManagerWidget(QWidget):
             self.password_list.addItem(item)
 
     def load_passwords(self):
-        """Load passwords from S3."""
+        # Load passwords from S3.
         try:
             obj = s3.get_object(Bucket='mgcapstonepasswordmanager', Key=f"{self.username}_passwords.json")
             encrypted_passwords = json.loads(obj['Body'].read().decode('utf-8'))
@@ -323,7 +323,7 @@ class PasswordManagerWidget(QWidget):
             self.passwords = []
 
     def save_passwords(self):
-        """Save passwords to S3."""
+        # Save passwords to S3.
         encrypted_passwords = []
         for entry in self.passwords:
             encrypted_entry = {
@@ -340,7 +340,7 @@ class PasswordManagerWidget(QWidget):
             print(f"Error saving passwords: {e}")
 
     def _derive_key(self, password):
-        """Derive encryption key from master password."""
+        # Derive encryption key from master password.
         salt = b'some_random_salt'
         kdf = PBKDF2HMAC(
             algorithm=hashes.SHA256(),
@@ -353,7 +353,7 @@ class PasswordManagerWidget(QWidget):
         return key
 
     def _encrypt(self, plaintext, key):
-        """Encrypt plaintext using AES-GCM."""
+        # Encrypt plaintext using AES-GCM.
         nonce = os.urandom(16)
         cipher = Cipher(algorithms.AES(key), modes.GCM(nonce), backend=default_backend())
         encryptor = cipher.encryptor()
@@ -361,7 +361,7 @@ class PasswordManagerWidget(QWidget):
         return base64.urlsafe_b64encode(nonce + encryptor.tag + ciphertext).decode()
 
     def _decrypt(self, ciphertext, key):
-        """Decrypt ciphertext using AES-GCM."""
+        # Decrypt ciphertext using AES-GCM.
         try:
             data = base64.urlsafe_b64decode(ciphertext)
             nonce = data[:16]
@@ -380,28 +380,28 @@ class PasswordManagerWidget(QWidget):
             return ""
 
     def sort_by_website(self):
-        """Sort passwords by website."""
+        # Sort passwords by website. 
         self.password_list.clear()
         sorted_passwords = sorted(self.passwords, key=lambda x: x['website'])
         self.passwords = sorted_passwords
         self.update_password_list()
 
     def sort_by_username(self):
-        """Sort passwords by username."""
+        # Sort passwords by username.
         self.password_list.clear()
         sorted_passwords = sorted(self.passwords, key=lambda x: x['username'])
         self.passwords = sorted_passwords
         self.update_password_list()
 
     def sort_by_datetime(self):
-        """Sort passwords by date/time."""
+        # Sort passwords by date/time.
         self.password_list.clear()
         sorted_passwords = sorted(self.passwords, key=lambda x: datetime.datetime.strptime(x['timestamp'], "%Y-%m-%d %H:%M:%S"), reverse=True)
         self.passwords = sorted_passwords
         self.update_password_list()
 
     def delete_password(self):
-        """Delete selected password."""
+        # Delete selected password.
         selected_items = self.password_list.selectedItems()
         if selected_items:
             selected_item = selected_items[0]
@@ -414,14 +414,14 @@ class PasswordManagerWidget(QWidget):
             QMessageBox.warning(self, "No Password Selected", "Please select a password to delete.")
 
     def copy_password_to_clipboard(self, item):
-        """Copy password to clipboard."""
+        # Copy password to clipboard.
         password = item.text().split("Password: ")[-1]
         clipboard = QApplication.clipboard()
         clipboard.setText(password)
 
 
 def user_exists(username, password):
-    """Check if user exists."""
+    # Check if user exists.
     try:
         obj = s3.get_object(Bucket='mgcapstonepasswordmanager', Key="users.json")
         users = json.loads(obj['Body'].read().decode('utf-8'))
@@ -432,7 +432,7 @@ def user_exists(username, password):
 
 
 def main():
-    """Main function to run the application."""
+    # Main function to run the application.
     app = QApplication(sys.argv)
     try:
         window = PasswordManager()
