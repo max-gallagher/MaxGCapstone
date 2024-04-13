@@ -13,7 +13,7 @@ from email.mime.multipart import MIMEMultipart
 from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QLabel, QLineEdit, QPushButton, \
     QMessageBox, QFormLayout, QListWidget, QListWidgetItem, QInputDialog, QSizePolicy, QCheckBox, QAction, QMenu
 from PyQt5.QtGui import QFont
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QTimer
 
 # Import cryptography modules for password encryption/decryption
 from cryptography.hazmat.backends import default_backend
@@ -24,8 +24,8 @@ from cryptography.fernet import Fernet
 # Initialize Boto3 client for Amazon S3
 s3 = boto3.client(
     's3',
-    aws_access_key_id='Access Key', # If you are Testing this contact Max and I will give you a temp one
-    aws_secret_access_key='Secret Access Key',
+    aws_access_key_id='AKIATQOYUXLOSM72IOYC',
+    aws_secret_access_key='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',
 )
 
 
@@ -290,6 +290,8 @@ class PasswordManagerWidget(QWidget):
         # Initialize the PasswordManagerWidget.
         super().__init__()
 
+        self.setMinimumSize(850, 600)  # Set a minimum size hint
+
         self.parent = parent
         self.username = username
         self.passwords = []
@@ -328,6 +330,12 @@ class PasswordManagerWidget(QWidget):
         form_layout.addRow(self.result_label)
 
         layout.addLayout(form_layout)  # Add form layout to the main layout
+
+        # Add search input field
+        self.search_entry = QLineEdit()
+        self.search_entry.setPlaceholderText("Search Passwords")
+        self.search_entry.textChanged.connect(self.search_passwords)
+        layout.addWidget(self.search_entry)
 
         # List widget to display passwords
         self.password_list = QListWidget()
@@ -427,10 +435,19 @@ class PasswordManagerWidget(QWidget):
         self.length_entry.clear()
         self.custom_password_entry.clear()
 
-    def update_password_list(self):
+    def search_passwords(self, query):
+        # Filter passwords based on search query
+        if query:
+            filtered_passwords = [entry for entry in self.passwords if query.lower() in entry['website'].lower() or query.lower() in entry['username'].lower()]
+            self.update_password_list(filtered_passwords)  # Update password list with filtered passwords
+        else:
+            self.update_password_list()  # If search query is empty, show all passwords
+
+    def update_password_list(self, passwords=None):
         # Update the password list widget.
         self.password_list.clear()
-        for entry in self.passwords:
+        passwords = passwords or self.passwords  # If passwords are not provided, use self.passwords
+        for entry in passwords:
             item = QListWidgetItem()
             password = entry['password']
             masked_password = password[0] + '*' * (len(password) - 2) + password[-1] if len(password) > 2 else '*' * len(password)
@@ -492,6 +509,14 @@ class PasswordManagerWidget(QWidget):
         clipboard = QApplication.clipboard()
         clipboard.setText(password)
         QMessageBox.information(self, "Password Copied", "Password copied to clipboard.")
+
+        # Clear clipboard after a certain period of time
+        QTimer.singleShot(30000, self.clear_clipboard)
+
+    def clear_clipboard(self):
+        clipboard = QApplication.clipboard()
+        clipboard.clear()
+        QMessageBox.information(self, "Clipboard Cleared", "Clipboard cleared.")
 
     def toggle_show_passwords(self):
         # Show or hide passwords.
