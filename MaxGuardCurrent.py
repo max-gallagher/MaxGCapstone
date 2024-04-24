@@ -6,28 +6,29 @@ import datetime
 import base64
 import os
 import boto3
+# Import modules for MFA
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+# Import GUI modules
 from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QLabel, QLineEdit, QPushButton, \
     QMessageBox, QFormLayout, QListWidget, QListWidgetItem, QInputDialog, QSizePolicy, QCheckBox, QAction, QMenu
 from PyQt5.QtGui import QFont
 from PyQt5.QtCore import Qt, QTimer
-
 # Import cryptography modules for password encryption/decryption
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.fernet import Fernet
 
 # Initialize Boto3 client for Amazon S3
 s3 = boto3.client(
     's3',
-    aws_access_key_id='Access Key', # If you are Testing this contact Max and I will give you a temp one
-    aws_secret_access_key='Secret Access Key',
+    aws_access_key_id='AKIATQOYUXLO62SPAN6Q',
+    aws_secret_access_key='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',
 )
-
 
 # Gmail SMTP Configuration
 SMTP_SERVER = 'smtp.gmail.com'
@@ -42,7 +43,6 @@ QWidget {
     color: #333333;
     font-family: Arial, sans-serif;
 }
-
 
 QLineEdit {
     border: 1px solid #cccccc;
@@ -228,10 +228,7 @@ class LoginWidget(QWidget):
             entered_code, ok = QInputDialog.getText(self, 'Verification Code', 'Enter the verification code sent to your email:')
             if ok and verify_code(entered_code, verification_code):
                 # Switch to PasswordManagerWidget if verification successful
-                master_password, ok = QInputDialog.getText(self, 'Organizational Group', 'Enter what organizational group you want to use:')
-                if ok:
-                    # Switch to PasswordManagerWidget if master password is entered correctly
-                    self.parent.setCentralWidget(PasswordManagerWidget(self.parent, username, master_password))
+                self.parent.setCentralWidget(PasswordManagerWidget(self.parent, username, password))  # Pass master_password here
             else:
                 QMessageBox.warning(self, "Verification Failed", "Invalid verification code. Please try again.")
         else:
@@ -511,7 +508,7 @@ class PasswordManagerWidget(QWidget):
         QMessageBox.information(self, "Password Copied", "Password copied to clipboard.")
 
         # Clear clipboard after a certain period of time
-        QTimer.singleShot(30000, self.clear_clipboard)
+        QTimer.singleShot(15000, self.clear_clipboard)
 
     def clear_clipboard(self):
         clipboard = QApplication.clipboard()
@@ -559,28 +556,44 @@ class PasswordManagerWidget(QWidget):
         self.update_password_list()
 
     def _derive_key(self, password):
-        # Derive a key from the master password.
-        password = password.encode()  # Convert password to bytes
-        salt = b'salt_'  # Add a salt for additional security
+        # Derive encryption key from master password.
+        salt = b'some_random_salt'
         kdf = PBKDF2HMAC(
             algorithm=hashes.SHA256(),
-            length=32,
+            iterations=100000,
             salt=salt,
-            iterations=100000,  # Adjust number of iterations as needed for performance
+            length=32,
             backend=default_backend()
         )
-        key = base64.urlsafe_b64encode(kdf.derive(password))  # Base64 encode the key
+        key = kdf.derive(password.encode())
         return key
 
-    def _encrypt(self, data, key):
-        # Encrypt data using Fernet symmetric encryption.
-        f = Fernet(key)
-        return f.encrypt(data.encode()).decode()  # Encode data as bytes before encryption, decode to string after encryption
+    def _encrypt(self, plaintext, key):
+        # Encrypt plaintext using AES-GCM.
+        nonce = os.urandom(16)
+        cipher = Cipher(algorithms.AES(key), modes.GCM(nonce), backend=default_backend())
+        encryptor = cipher.encryptor()
+        ciphertext = encryptor.update(plaintext.encode()) + encryptor.finalize()
+        return base64.urlsafe_b64encode(nonce + encryptor.tag + ciphertext).decode()
 
-    def _decrypt(self, encrypted_data, key):
-        # Decrypt data using Fernet symmetric encryption.
-        f = Fernet(key)
-        return f.decrypt(encrypted_data.encode()).decode()  # Decode decrypted bytes to string
+    def _decrypt(self, ciphertext, key):
+        # Decrypt ciphertext using AES-GCM.
+        try:
+            data = base64.urlsafe_b64decode(ciphertext)
+            nonce = data[:16]
+            tag = data[16:32]
+
+            if len(tag) < 16:
+                raise ValueError("Authentication tag must be 16 bytes or longer.")
+
+            cipher = Cipher(algorithms.AES(key[:32]), modes.GCM(nonce, tag))
+            decryptor = cipher.decryptor()
+            plaintext = decryptor.update(data[32:])
+            plaintext += decryptor.finalize()
+            return plaintext.decode()
+        except Exception as e:
+            print(f"Error decrypting: {e}")
+            return ""
 
 def generate_verification_code():
     # Generate a verification code.
