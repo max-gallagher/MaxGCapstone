@@ -26,15 +26,15 @@ from cryptography.fernet import Fernet
 # Initialize Boto3 client for Amazon S3
 s3 = boto3.client(
     's3',
-    aws_access_key_id='AKIATQOYUXLO62SPAN6Q',
-    aws_secret_access_key='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',
+    aws_access_key_id='insert AWS Key',
+    aws_secret_access_key='insert secret key',
 )
 
 # Gmail SMTP Configuration
 SMTP_SERVER = 'smtp.gmail.com'
 SMTP_PORT = 465  # SSL port
 EMAIL_SENDER = 'maxguardmfa@gmail.com'  # Your Gmail address
-EMAIL_SENDER_PASSWORD = 'hqho cmoz vwzw qctv'  # Your Gmail password
+EMAIL_SENDER_PASSWORD = '#insert password'  # Your Gmail password
 
 # Define default and high contrast/dark mode stylesheets
 default_stylesheet = """
